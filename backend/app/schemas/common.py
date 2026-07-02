@@ -1,6 +1,17 @@
 from marshmallow import Schema, ValidationError, fields, validates_schema
 
 
+class RegisterSchema(Schema):
+    name = fields.Str(required=True, validate=lambda value: 2 <= len(value.strip()) <= 80)
+    email = fields.Email(required=True)
+    password = fields.Str(required=True, validate=lambda value: 8 <= len(value) <= 128)
+
+
+class LoginSchema(Schema):
+    email = fields.Email(required=True)
+    password = fields.Str(required=True, validate=lambda value: 1 <= len(value) <= 128)
+
+
 class SellerSchema(Schema):
     display_name = fields.Str(required=True, validate=lambda value: 2 <= len(value.strip()) <= 80)
     bio = fields.Str(load_default="", validate=lambda value: len(value) <= 1000)

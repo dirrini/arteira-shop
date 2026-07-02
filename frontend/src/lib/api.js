@@ -21,6 +21,8 @@ async function request(path, options = {}) {
 
 export const api = {
   me: () => request("/api/auth/me"),
+  register: (payload) => request("/api/auth/register", { method: "POST", body: JSON.stringify(payload) }),
+  login: (payload) => request("/api/auth/login", { method: "POST", body: JSON.stringify(payload) }),
   loginGoogle: (credential) => request("/api/auth/google", { method: "POST", body: JSON.stringify({ credential }) }),
   logout: () => request("/api/auth/logout", { method: "POST" }),
   products: (params = {}) => request(`/api/products?${new URLSearchParams(params)}`),

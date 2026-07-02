@@ -27,6 +27,21 @@ def serialize_id(document):
     return document
 
 
+def serialize_user(user):
+    if not user:
+        return user
+    return {
+        "id": str(user["_id"]),
+        "email": user["email"],
+        "name": user["name"],
+        "picture": user.get("picture", ""),
+        "roles": user.get("roles", ["buyer"]),
+        "email_verified": user.get("email_verified", False),
+        "auth_providers": user.get("auth_providers", []),
+        "created_at": user.get("created_at"),
+    }
+
+
 def create_token(user):
     now = utcnow()
     payload = {

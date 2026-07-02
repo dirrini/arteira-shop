@@ -1,5 +1,6 @@
 from flask import current_app, g
 from pymongo import ASCENDING, DESCENDING, MongoClient, TEXT
+from pymongo.errors import OperationFailure
 
 
 def get_client():
@@ -21,7 +22,14 @@ def close_mongo(error=None):
 def init_indexes(app):
     with app.app_context():
         db = get_db()
-        db.users.create_index([("google_sub", ASCENDING)], unique=True)
+        google_index = db.users.index_information().get("google_sub_1")
+        if google_index and not google_index.get("sparse"):
+            try:
+                db.users.drop_index("google_sub_1")
+            except OperationFailure as error:
+                if error.code != 27:
+                    raise
+        db.users.create_index([("google_sub", ASCENDING)], unique=True, sparse=True)
         db.users.create_index([("email", ASCENDING)], unique=True)
         db.sellers.create_index([("user_id", ASCENDING)], unique=True)
         db.products.create_index(

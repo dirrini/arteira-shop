@@ -7,12 +7,13 @@ Production-oriented marketplace scaffold for Brazilian craftwork sellers and buy
 - Python 3.12, Flask, Gunicorn
 - MongoDB 7 with explicit indexes
 - React 18, Vite, Nginx
-- Google Identity Services login
+- Native email/password authentication and Google Identity Services login
 - Mercado Pago Checkout Pro for Brazilian payments
 
 ## Features
 
-- Google OAuth login with server-side ID token verification
+- Email/password registration and login with salted password hashing
+- Google OAuth login with server-side ID token verification and account linking
 - Secure HTTP-only JWT session cookie
 - Buyer and seller modes from the same account
 - Seller profile creation
@@ -86,6 +87,7 @@ Use test credentials and test users before production credentials. Set `MERCADO_
 - Replace default CORS with exact production origins.
 - Put MongoDB behind private networking.
 - Store secrets in a managed secret store, not in source control.
+- Add transactional email verification, password recovery and login rate limiting before a public launch.
 - Add seller KYC and payout onboarding before releasing real seller settlements.
 - Add shipping calculation, refund workflows, antifraud review and fiscal document handling before a real launch in Brazil.
 - Run backups and monitoring for MongoDB, API latency, webhook failures and payment status drift.

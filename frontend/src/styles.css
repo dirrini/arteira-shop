@@ -99,6 +99,17 @@ nav button:hover,
   width: 34px;
 }
 
+.account-avatar {
+  align-items: center;
+  background: #e6f3f1;
+  border-radius: 50%;
+  color: #147c72;
+  display: flex;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
 .hero {
   background:
     linear-gradient(90deg, rgba(36, 31, 26, 0.78), rgba(36, 31, 26, 0.34)),
@@ -293,7 +304,9 @@ textarea {
   display: grid;
   gap: 16px;
   justify-items: center;
+  max-height: calc(100vh - 40px);
   max-width: 440px;
+  overflow-y: auto;
   padding: 36px;
   position: relative;
   text-align: center;
@@ -308,6 +321,83 @@ textarea {
 .auth-dialog p,
 .auth-dialog small {
   color: #675d52;
+}
+
+.auth-tabs {
+  background: #eee9e2;
+  border-radius: 8px;
+  display: grid;
+  gap: 4px;
+  grid-template-columns: 1fr 1fr;
+  padding: 4px;
+  width: 100%;
+}
+
+.auth-tabs button {
+  background: transparent;
+  color: #675d52;
+  min-height: 38px;
+}
+
+.auth-tabs button.active {
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(29, 26, 22, 0.12);
+  color: #241f1a;
+  font-weight: 700;
+}
+
+.auth-form {
+  display: grid;
+  gap: 12px;
+  text-align: left;
+  width: 100%;
+}
+
+.auth-form label {
+  color: #3c352e;
+  display: grid;
+  font-size: 0.9rem;
+  font-weight: 700;
+  gap: 6px;
+}
+
+.auth-form small {
+  margin-top: -6px;
+}
+
+.auth-submit {
+  margin-top: 4px;
+  width: 100%;
+}
+
+.auth-error {
+  background: #fff0ed;
+  border: 1px solid #efc4bb;
+  border-radius: 8px;
+  color: #8d3026 !important;
+  font-size: 0.9rem;
+  padding: 10px 12px;
+  text-align: left;
+  width: 100%;
+}
+
+.auth-divider {
+  border-top: 1px solid #ded6cc;
+  height: 1px;
+  margin: 4px 0;
+  position: relative;
+  width: 100%;
+}
+
+.auth-divider span {
+  background: #fff;
+  color: #796d60;
+  font-size: 0.85rem;
+  left: 50%;
+  padding: 0 10px;
+  position: absolute;
+  top: 0;
+  transform: translate(-50%, -50%);
 }
 
 .auth-mark {

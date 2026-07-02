@@ -47,40 +47,6 @@ function App() {
   }, [view, loadOrders]);
 
   useEffect(() => {
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-    if (!clientId || signedIn || !authOpen) return undefined;
-    let attempts = 0;
-    const renderGoogleButton = () => {
-      const target = document.getElementById("google-button");
-      if (!target) return;
-      if (!window.google) {
-        attempts += 1;
-        if (attempts < 40) window.setTimeout(renderGoogleButton, 150);
-        return;
-      }
-      window.google.accounts.id.initialize({
-        client_id: clientId,
-        callback: async ({ credential }) => {
-          await api.loginGoogle(credential);
-          await refreshSession();
-          setAuthOpen(false);
-          setNotice("Login realizado com Google.");
-        },
-      });
-      target.innerHTML = "";
-      window.google.accounts.id.renderButton(target, {
-        theme: "outline",
-        size: "large",
-        shape: "rectangular",
-        text: "continue_with",
-        locale: "pt-BR",
-      });
-    };
-    renderGoogleButton();
-    return undefined;
-  }, [authOpen, refreshSession, signedIn]);
-
-  useEffect(() => {
     if (!authOpen) return undefined;
     const closeOnEscape = (event) => {
       if (event.key === "Escape") setAuthOpen(false);
@@ -102,7 +68,7 @@ function App() {
 
   async function buy(product) {
     if (!signedIn) {
-      setNotice("Entre com Google para finalizar a compra.");
+      setNotice("Entre ou crie sua conta para finalizar a compra.");
       setAuthOpen(true);
       return;
     }
@@ -136,7 +102,11 @@ function App() {
           )}
           {signedIn && (
             <>
-              <img src={session.user.picture} alt="" />
+              {session.user.picture ? (
+                <img src={session.user.picture} alt="" />
+              ) : (
+                <span className="account-avatar"><UserRound size={18} /></span>
+              )}
               <span>{session.user.name}</span>
               <button className="icon" onClick={logout} aria-label="Sair"><LogOut size={18} /></button>
             </>
@@ -172,20 +142,128 @@ function App() {
       {view === "sales" && <OrderList orders={orders} title="Vendas recebidas" />}
 
       {authOpen && (
-        <div className="modal-backdrop" role="presentation" onMouseDown={() => setAuthOpen(false)}>
-          <section className="auth-dialog" role="dialog" aria-modal="true" aria-labelledby="auth-title" onMouseDown={(event) => event.stopPropagation()}>
-            <button className="icon close-dialog" onClick={() => setAuthOpen(false)} aria-label="Fechar">
-              <X size={20} />
-            </button>
-            <div className="auth-mark"><UserRound size={24} /></div>
-            <h1 id="auth-title">Entrar ou criar conta</h1>
-            <p>Use sua conta Google para comprar, acompanhar pedidos ou começar a vender na Arteira.</p>
-            <div id="google-button" className="google-button" />
-            <small>Ao continuar, uma conta gratuita será criada automaticamente no primeiro acesso.</small>
-          </section>
-        </div>
+        <AuthDialog
+          onClose={() => setAuthOpen(false)}
+          onAuthenticated={async (message) => {
+            await refreshSession();
+            setAuthOpen(false);
+            setNotice(message);
+          }}
+        />
       )}
     </main>
+  );
+}
+
+function AuthDialog({ onClose, onAuthenticated }) {
+  const [mode, setMode] = useState("login");
+  const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  const googleEnabled = Boolean(clientId && !clientId.startsWith("replace-with"));
+
+  useEffect(() => {
+    if (!googleEnabled) return undefined;
+    let attempts = 0;
+    const renderGoogleButton = () => {
+      const target = document.getElementById("google-button");
+      if (!target) return;
+      if (!window.google) {
+        attempts += 1;
+        if (attempts < 40) window.setTimeout(renderGoogleButton, 150);
+        return;
+      }
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: async ({ credential }) => {
+          try {
+            setError("");
+            await api.loginGoogle(credential);
+            await onAuthenticated("Login realizado com Google.");
+          } catch (requestError) {
+            setError(requestError.message);
+          }
+        },
+      });
+      target.innerHTML = "";
+      window.google.accounts.id.renderButton(target, {
+        theme: "outline",
+        size: "large",
+        shape: "rectangular",
+        text: "continue_with",
+        locale: "pt-BR",
+      });
+    };
+    renderGoogleButton();
+    return undefined;
+  }, [clientId, googleEnabled, onAuthenticated]);
+
+  function changeMode(nextMode) {
+    setMode(nextMode);
+    setError("");
+  }
+
+  async function submit(event) {
+    event.preventDefault();
+    setError("");
+    setSubmitting(true);
+    try {
+      if (mode === "register") {
+        await api.register(form);
+        await onAuthenticated("Conta criada com sucesso.");
+      } else {
+        await api.login({ email: form.email, password: form.password });
+        await onAuthenticated("Login realizado com sucesso.");
+      }
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="modal-backdrop" role="presentation" onMouseDown={onClose}>
+      <section className="auth-dialog" role="dialog" aria-modal="true" aria-labelledby="auth-title" onMouseDown={(event) => event.stopPropagation()}>
+        <button className="icon close-dialog" onClick={onClose} aria-label="Fechar">
+          <X size={20} />
+        </button>
+        <div className="auth-mark"><UserRound size={24} /></div>
+        <h1 id="auth-title">Sua conta Arteira</h1>
+        <div className="auth-tabs" role="tablist" aria-label="Acesso à conta">
+          <button type="button" role="tab" aria-selected={mode === "login"} className={mode === "login" ? "active" : ""} onClick={() => changeMode("login")}>Entrar</button>
+          <button type="button" role="tab" aria-selected={mode === "register"} className={mode === "register" ? "active" : ""} onClick={() => changeMode("register")}>Criar conta</button>
+        </div>
+        <form className="auth-form" onSubmit={submit}>
+          {mode === "register" && (
+            <label>
+              Nome
+              <input required minLength="2" maxLength="80" autoComplete="name" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
+            </label>
+          )}
+          <label>
+            E-mail
+            <input required type="email" autoComplete="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} />
+          </label>
+          <label>
+            Senha
+            <input required type="password" minLength={mode === "register" ? 8 : 1} maxLength="128" autoComplete={mode === "register" ? "new-password" : "current-password"} value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} />
+          </label>
+          {mode === "register" && <small>Use pelo menos 8 caracteres.</small>}
+          {error && <p className="auth-error" role="alert">{error}</p>}
+          <button className="auth-submit" disabled={submitting}>
+            {submitting ? "Aguarde..." : mode === "register" ? "Criar minha conta" : "Entrar"}
+          </button>
+        </form>
+        {googleEnabled && (
+          <>
+            <div className="auth-divider"><span>ou</span></div>
+            <div id="google-button" className="google-button" />
+          </>
+        )}
+      </section>
+    </div>
   );
 }
 
