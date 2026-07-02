@@ -75,6 +75,17 @@ nav button:hover,
   color: #fff;
 }
 
+.sign-in {
+  background: #27231f;
+  color: #fff;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.sign-in:hover {
+  background: #147c72;
+}
+
 .account {
   align-items: center;
   display: flex;
@@ -255,6 +266,74 @@ textarea {
   padding: 12px 14px;
 }
 
+.sign-in-panel {
+  justify-items: start;
+}
+
+.sign-in-panel p {
+  margin: 0;
+}
+
+.modal-backdrop {
+  align-items: center;
+  background: rgba(29, 26, 22, 0.64);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 20px;
+  position: fixed;
+  z-index: 50;
+}
+
+.auth-dialog {
+  background: #fff;
+  border: 1px solid #ded6cc;
+  border-radius: 8px;
+  box-shadow: 0 24px 70px rgba(29, 26, 22, 0.28);
+  display: grid;
+  gap: 16px;
+  justify-items: center;
+  max-width: 440px;
+  padding: 36px;
+  position: relative;
+  text-align: center;
+  width: 100%;
+}
+
+.auth-dialog h1,
+.auth-dialog p {
+  margin: 0;
+}
+
+.auth-dialog p,
+.auth-dialog small {
+  color: #675d52;
+}
+
+.auth-mark {
+  align-items: center;
+  background: #e6f3f1;
+  border-radius: 50%;
+  color: #147c72;
+  display: flex;
+  height: 52px;
+  justify-content: center;
+  width: 52px;
+}
+
+.close-dialog {
+  min-height: 36px;
+  padding: 0;
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  width: 36px;
+}
+
+.google-button {
+  min-height: 44px;
+}
+
 .order,
 .empty {
   align-items: center;
@@ -280,5 +359,9 @@ textarea {
 
   .hero {
     min-height: 560px;
+  }
+
+  .auth-dialog {
+    padding: 32px 20px 24px;
   }
 }

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { LogOut, PackagePlus, Search, ShieldCheck, ShoppingBag, Store, UserRound } from "lucide-react";
+import { LogIn, LogOut, PackagePlus, Search, ShieldCheck, ShoppingBag, Store, UserRound, X } from "lucide-react";
 import { api } from "./lib/api";
 import "./styles.css";
 
@@ -14,6 +14,7 @@ function App() {
   const [view, setView] = useState("market");
   const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(true);
+  const [authOpen, setAuthOpen] = useState(false);
 
   const signedIn = Boolean(session.user);
 
@@ -47,7 +48,7 @@ function App() {
 
   useEffect(() => {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-    if (!clientId || signedIn) return undefined;
+    if (!clientId || signedIn || !authOpen) return undefined;
     let attempts = 0;
     const renderGoogleButton = () => {
       const target = document.getElementById("google-button");
@@ -62,6 +63,7 @@ function App() {
         callback: async ({ credential }) => {
           await api.loginGoogle(credential);
           await refreshSession();
+          setAuthOpen(false);
           setNotice("Login realizado com Google.");
         },
       });
@@ -76,7 +78,16 @@ function App() {
     };
     renderGoogleButton();
     return undefined;
-  }, [refreshSession, signedIn]);
+  }, [authOpen, refreshSession, signedIn]);
+
+  useEffect(() => {
+    if (!authOpen) return undefined;
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") setAuthOpen(false);
+    };
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [authOpen]);
 
   const stats = useMemo(() => {
     const active = products.length;
@@ -92,6 +103,7 @@ function App() {
   async function buy(product) {
     if (!signedIn) {
       setNotice("Entre com Google para finalizar a compra.");
+      setAuthOpen(true);
       return;
     }
     const data = await api.checkout({ product_id: product.id, quantity: 1 });
@@ -117,7 +129,11 @@ function App() {
           {session.seller && <button className={view === "sales" ? "active" : ""} onClick={() => setView("sales")}><ShieldCheck size={18} /> Vendas</button>}
         </nav>
         <div className="account">
-          {!signedIn && <div id="google-button" />}
+          {!signedIn && (
+            <button className="sign-in" onClick={() => setAuthOpen(true)}>
+              <LogIn size={18} /> Entrar
+            </button>
+          )}
           {signedIn && (
             <>
               <img src={session.user.picture} alt="" />
@@ -151,9 +167,24 @@ function App() {
         </>
       )}
 
-      {view === "sell" && <SellerStudio session={session} refreshSession={refreshSession} onCreated={() => loadProducts()} />}
+      {view === "sell" && <SellerStudio session={session} refreshSession={refreshSession} onCreated={() => loadProducts()} onSignIn={() => setAuthOpen(true)} />}
       {view === "orders" && <OrderList orders={orders} title="Meus pedidos" />}
       {view === "sales" && <OrderList orders={orders} title="Vendas recebidas" />}
+
+      {authOpen && (
+        <div className="modal-backdrop" role="presentation" onMouseDown={() => setAuthOpen(false)}>
+          <section className="auth-dialog" role="dialog" aria-modal="true" aria-labelledby="auth-title" onMouseDown={(event) => event.stopPropagation()}>
+            <button className="icon close-dialog" onClick={() => setAuthOpen(false)} aria-label="Fechar">
+              <X size={20} />
+            </button>
+            <div className="auth-mark"><UserRound size={24} /></div>
+            <h1 id="auth-title">Entrar ou criar conta</h1>
+            <p>Use sua conta Google para comprar, acompanhar pedidos ou começar a vender na Arteira.</p>
+            <div id="google-button" className="google-button" />
+            <small>Ao continuar, uma conta gratuita será criada automaticamente no primeiro acesso.</small>
+          </section>
+        </div>
+      )}
     </main>
   );
 }
@@ -178,7 +209,7 @@ function ProductGrid({ loading, products, onBuy }) {
   );
 }
 
-function SellerStudio({ session, refreshSession, onCreated }) {
+function SellerStudio({ session, refreshSession, onCreated, onSignIn }) {
   const [seller, setSeller] = useState({ display_name: "", bio: "", city: "", state: "SP", document: "" });
   const [product, setProduct] = useState({ title: "", description: "", category: "", price_cents: 10000, inventory: 1, images: [], materials: [], lead_time_days: 3 });
   const [message, setMessage] = useState("");
@@ -199,7 +230,13 @@ function SellerStudio({ session, refreshSession, onCreated }) {
   }
 
   if (!session.user) {
-    return <section className="panel"><h1>Entre para vender</h1><p>Use Google no topo da página para criar seu perfil de vendedor e publicar seus produtos.</p></section>;
+    return (
+      <section className="panel sign-in-panel">
+        <h1>Entre para vender</h1>
+        <p>Crie sua conta para montar o perfil do ateliê e publicar seus produtos.</p>
+        <button onClick={onSignIn}><LogIn size={18} /> Entrar com Google</button>
+      </section>
+    );
   }
 
   return (
