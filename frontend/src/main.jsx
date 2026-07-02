@@ -288,23 +288,70 @@ function ProductGrid({ loading, products, onBuy }) {
 }
 
 function SellerStudio({ session, refreshSession, onCreated, onSignIn }) {
-  const [seller, setSeller] = useState({ display_name: "", bio: "", city: "", state: "SP", document: "" });
-  const [product, setProduct] = useState({ title: "", description: "", category: "", price_cents: 10000, inventory: 1, images: [], materials: [], lead_time_days: 3 });
+  const [seller, setSeller] = useState(() => ({
+    display_name: session.seller?.display_name || "",
+    bio: session.seller?.bio || "",
+    city: session.seller?.city || "",
+    state: session.seller?.state || "SP",
+    document: session.seller?.document || "",
+  }));
+  const [product, setProduct] = useState({ title: "", description: "", category: "", price_reais: "100.00", inventory: 1, images: [], materials: [], lead_time_days: 3 });
   const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [savingSeller, setSavingSeller] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+
+  function requestErrorMessage(requestError) {
+    const fields = requestError.payload?.fields;
+    if (fields) {
+      const labels = { display_name: "Nome público", city: "Cidade", state: "UF", title: "Título", description: "Descrição", category: "Categoria", price_cents: "Preço", inventory: "Estoque", images: "Imagem", lead_time_days: "Prazo" };
+      return Object.entries(fields).map(([field, messages]) => `${labels[field] || field}: ${messages.join(" ")}`).join(" ");
+    }
+    return requestError.message || "Não foi possível concluir a operação.";
+  }
 
   async function saveSeller(event) {
     event.preventDefault();
-    await api.upsertSeller(seller);
-    await refreshSession();
-    setMessage("Perfil de vendedor salvo.");
+    setError("");
+    setMessage("");
+    setSavingSeller(true);
+    try {
+      await api.upsertSeller(seller);
+      await refreshSession();
+      setMessage("Perfil de vendedor salvo. Você já pode publicar produtos.");
+    } catch (requestError) {
+      setError(requestErrorMessage(requestError));
+    } finally {
+      setSavingSeller(false);
+    }
   }
 
   async function publish(event) {
     event.preventDefault();
-    const payload = { ...product, images: product.images.filter(Boolean), materials: product.materials.filter(Boolean) };
-    await api.createProduct(payload);
-    setMessage("Produto publicado na vitrine.");
-    onCreated();
+    setError("");
+    setMessage("");
+    if (!session.seller) {
+      setError("Salve um perfil de vendedor válido antes de publicar o produto.");
+      return;
+    }
+    setPublishing(true);
+    try {
+      const { price_reais: priceReais, ...productFields } = product;
+      const payload = {
+        ...productFields,
+        price_cents: Math.round(Number(String(priceReais).replace(",", ".")) * 100),
+        images: product.images.filter(Boolean),
+        materials: product.materials.filter(Boolean),
+      };
+      await api.createProduct(payload);
+      setProduct({ title: "", description: "", category: "", price_reais: "100.00", inventory: 1, images: [], materials: [], lead_time_days: 3 });
+      setMessage("Produto publicado na vitrine.");
+      await onCreated();
+    } catch (requestError) {
+      setError(requestErrorMessage(requestError));
+    } finally {
+      setPublishing(false);
+    }
   }
 
   if (!session.user) {
@@ -321,33 +368,35 @@ function SellerStudio({ session, refreshSession, onCreated, onSignIn }) {
     <section className="studio">
       <form onSubmit={saveSeller}>
         <h1>Perfil do ateliê</h1>
-        <input placeholder="Nome público" value={seller.display_name} onChange={(event) => setSeller({ ...seller, display_name: event.target.value })} />
-        <textarea placeholder="Bio do ateliê" value={seller.bio} onChange={(event) => setSeller({ ...seller, bio: event.target.value })} />
+        <label>Nome público<input required minLength="2" maxLength="80" placeholder="Ex.: Ateliê Aurora" value={seller.display_name} onChange={(event) => setSeller({ ...seller, display_name: event.target.value })} /></label>
+        <label>Sobre o ateliê<textarea maxLength="1000" placeholder="Conte um pouco sobre seu trabalho" value={seller.bio} onChange={(event) => setSeller({ ...seller, bio: event.target.value })} /></label>
         <div className="split">
-          <input placeholder="Cidade" value={seller.city} onChange={(event) => setSeller({ ...seller, city: event.target.value })} />
-          <input placeholder="UF" maxLength="2" value={seller.state} onChange={(event) => setSeller({ ...seller, state: event.target.value.toUpperCase() })} />
+          <label>Cidade<input required minLength="2" maxLength="80" placeholder="São Paulo" value={seller.city} onChange={(event) => setSeller({ ...seller, city: event.target.value })} /></label>
+          <label>UF<input required minLength="2" maxLength="2" placeholder="SP" value={seller.state} onChange={(event) => setSeller({ ...seller, state: event.target.value.toUpperCase() })} /></label>
         </div>
-        <input placeholder="CPF/CNPJ para validação futura" value={seller.document} onChange={(event) => setSeller({ ...seller, document: event.target.value })} />
-        <button><Store size={18} /> Salvar perfil</button>
+        <label>CPF/CNPJ <span className="optional">Opcional</span><input maxLength="32" placeholder="Documento para validação futura" value={seller.document} onChange={(event) => setSeller({ ...seller, document: event.target.value })} /></label>
+        <button disabled={savingSeller}><Store size={18} /> {savingSeller ? "Salvando..." : "Salvar perfil"}</button>
       </form>
 
       <form onSubmit={publish}>
         <h1>Novo produto</h1>
-        <input placeholder="Título" value={product.title} onChange={(event) => setProduct({ ...product, title: event.target.value })} />
-        <textarea placeholder="Descrição" value={product.description} onChange={(event) => setProduct({ ...product, description: event.target.value })} />
+        {!session.seller && <p className="form-hint">Salve o perfil do ateliê ao lado para habilitar a publicação.</p>}
+        <label>Título<input required minLength="3" maxLength="120" placeholder="Ex.: Vaso de cerâmica artesanal" value={product.title} onChange={(event) => setProduct({ ...product, title: event.target.value })} /></label>
+        <label>Descrição<textarea required minLength="10" maxLength="3000" placeholder="Descreva medidas, acabamento e detalhes da peça" value={product.description} onChange={(event) => setProduct({ ...product, description: event.target.value })} /></label>
         <div className="split">
-          <input placeholder="Categoria" value={product.category} onChange={(event) => setProduct({ ...product, category: event.target.value })} />
-          <input type="number" min="100" step="100" value={product.price_cents} onChange={(event) => setProduct({ ...product, price_cents: Number(event.target.value) })} />
+          <label>Categoria<input required minLength="2" maxLength="60" placeholder="Cerâmica" value={product.category} onChange={(event) => setProduct({ ...product, category: event.target.value })} /></label>
+          <label>Preço (R$)<input required type="number" min="1" step="0.01" inputMode="decimal" value={product.price_reais} onChange={(event) => setProduct({ ...product, price_reais: event.target.value })} /></label>
         </div>
         <div className="split">
-          <input type="number" min="0" value={product.inventory} onChange={(event) => setProduct({ ...product, inventory: Number(event.target.value) })} />
-          <input type="number" min="0" value={product.lead_time_days} onChange={(event) => setProduct({ ...product, lead_time_days: Number(event.target.value) })} />
+          <label>Estoque<input required type="number" min="0" value={product.inventory} onChange={(event) => setProduct({ ...product, inventory: Number(event.target.value) })} /></label>
+          <label>Produção (dias)<input required type="number" min="0" value={product.lead_time_days} onChange={(event) => setProduct({ ...product, lead_time_days: Number(event.target.value) })} /></label>
         </div>
-        <input placeholder="URL da imagem principal" onChange={(event) => setProduct({ ...product, images: [event.target.value] })} />
-        <input placeholder="Materiais separados por vírgula" onChange={(event) => setProduct({ ...product, materials: event.target.value.split(",").map((item) => item.trim()) })} />
-        <button disabled={!session.seller}><PackagePlus size={18} /> Publicar produto</button>
+        <label>Imagem principal <span className="optional">Opcional</span><input type="url" placeholder="https://..." value={product.images[0] || ""} onChange={(event) => setProduct({ ...product, images: [event.target.value] })} /></label>
+        <label>Materiais <span className="optional">Opcional</span><input placeholder="Argila, esmalte, madeira" value={product.materials.join(", ")} onChange={(event) => setProduct({ ...product, materials: event.target.value.split(",").map((item) => item.trim()) })} /></label>
+        <button disabled={publishing}><PackagePlus size={18} /> {publishing ? "Publicando..." : "Publicar produto"}</button>
       </form>
-      {message && <p className="notice">{message}</p>}
+      {message && <p className="notice studio-feedback">{message}</p>}
+      {error && <p className="form-error studio-feedback" role="alert">{error}</p>}
     </section>
   );
 }

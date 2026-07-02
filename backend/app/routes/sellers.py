@@ -16,7 +16,7 @@ def upsert_seller():
     try:
         data = seller_schema.load(request.get_json(silent=True) or {})
     except ValidationError as error:
-        return jsonify({"error": "validation_error", "fields": error.messages}), 422
+        return jsonify({"error": "validation_error", "message": "Revise os campos do perfil de vendedor.", "fields": error.messages}), 422
 
     now = utcnow()
     db = get_db()

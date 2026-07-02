@@ -253,6 +253,51 @@ form button {
   margin: 0;
 }
 
+.studio form label {
+  color: #3c352e;
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.studio form label input,
+.studio form label textarea {
+  margin-top: 6px;
+}
+
+.optional {
+  color: #796d60;
+  float: right;
+  font-size: 0.8rem;
+  font-weight: 400;
+}
+
+.form-hint {
+  background: #f1eee9;
+  border-left: 3px solid #147c72;
+  color: #675d52;
+  margin: 0;
+  padding: 10px 12px;
+}
+
+.form-error {
+  background: #fff0ed;
+  border: 1px solid #efc4bb;
+  border-radius: 8px;
+  color: #8d3026;
+  margin: 0;
+  padding: 12px 14px;
+}
+
+.studio-feedback {
+  grid-column: 1 / -1;
+}
+
+form button:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
 .panel h1,
 .studio h1 {
   margin: 0 0 8px;
@@ -266,7 +311,7 @@ textarea {
 .split {
   display: grid;
   gap: 12px;
-  grid-template-columns: 1fr 120px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .notice {

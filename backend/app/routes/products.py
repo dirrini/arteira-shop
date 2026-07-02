@@ -53,7 +53,7 @@ def create_product():
     try:
         data = product_schema.load(request.get_json(silent=True) or {})
     except ValidationError as error:
-        return jsonify({"error": "validation_error", "fields": error.messages}), 422
+        return jsonify({"error": "validation_error", "message": "Revise os campos do produto.", "fields": error.messages}), 422
 
     now = utcnow()
     product = {
@@ -90,7 +90,7 @@ def update_product(product_id):
     try:
         data = product_schema.load(request.get_json(silent=True) or {}, partial=True)
     except ValidationError as error:
-        return jsonify({"error": "validation_error", "fields": error.messages}), 422
+        return jsonify({"error": "validation_error", "message": "Revise os campos do produto.", "fields": error.messages}), 422
     product = get_db().products.find_one_and_update(
         {"_id": oid, "seller_id": seller["_id"]},
         {"$set": {**data, "updated_at": utcnow()}},
